@@ -37,7 +37,7 @@ protocol FaceRecognitionViewModelProtocol: ObservableObject, Identifiable {
 
 final class FaceRecognitionViewModel: FaceRecognitionViewModelProtocol {
 
-    // MARK: - Published state
+    // MARK: - Published
 
     @Published private(set) var hasDetectedValidFace = false
     @Published private(set) var stateFace: FaceState = .faceOnCentre
@@ -70,15 +70,9 @@ final class FaceRecognitionViewModel: FaceRecognitionViewModelProtocol {
 
     weak var coordinator: AppCoordinator?
     private let fileManagerService: FileManagerServiceProtocol
-
-    // MARK: - Timer
-
     private var timer: AnyCancellable?
     private var isTimerRunning = false
     private let timerTicksRequired = 30
-
-    // MARK: - Other
-
     private var stopTakePhoto = false
     private var savedSelfies: [FaceState: URL] = [:]
 
@@ -137,7 +131,6 @@ final class FaceRecognitionViewModel: FaceRecognitionViewModelProtocol {
 }
 
 private extension FaceRecognitionViewModel {
-
     func bindShutter() {
         shutterReleased
             .sink { [weak self] in
@@ -188,7 +181,6 @@ private extension FaceRecognitionViewModel {
     func updateQuality(_ model: FaceQualityModel) {
         faceDetectedState = .faceDetected
         faceQualityState = .faceFound(model)
-
         isAcceptableQuality = model.quality >= 0.2
         validateFace()
     }
@@ -301,13 +293,14 @@ private extension FaceRecognitionViewModel {
     }
 
     func takePhoto() {
-        print("📸 takePhoto triggered")
+        debugPrint("📸 takePhoto triggered")
     }
 
     func savePhoto(_ image: UIImage) {
         selfiePhoto = image
 
         guard case .inProgress(let sequence) = verificationStage else { return }
+        
         let pose = sequence[currentSequenceIndex]
 
         Task { @MainActor in

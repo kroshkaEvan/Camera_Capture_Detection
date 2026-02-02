@@ -14,7 +14,7 @@ protocol WalletsPreFaceViewModelProtocol: ObservableObject, Identifiable {
     func openFaceRecognition()
 }
 
-final class WalletsPreFaceViewModel: ObservableObject, WalletsPreFaceViewModelProtocol {
+final class WalletsPreFaceViewModel: WalletsPreFaceViewModelProtocol {
     weak var coordinator: AppCoordinator?
     
     func openFaceRecognition() {
@@ -33,11 +33,9 @@ private extension WalletsPreFaceViewModel {
     func requestCameraAccess() {
         AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
             DispatchQueue.main.async {
-                if granted {
-                    self?.navigateToFaceRecognition()
-                } else {
-                    self?.showCameraPermissionAlert()
-                }
+                granted
+                ? self?.navigateToFaceRecognition()
+                : self?.showCameraPermissionAlert()
             }
         }
     }

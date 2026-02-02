@@ -9,7 +9,7 @@ import UIKit
 import AVFoundation
 import MetalKit
 
-class FaceRecognitionViewController: UIViewController {
+final class FaceRecognitionViewController: UIViewController {
     var captureDetector: FaceCaptureDetector?
     
     private var previewLayer: AVCaptureVideoPreviewLayer?
@@ -60,7 +60,7 @@ private extension FaceRecognitionViewController {
             for: .video,
             position: .front
         ) else {
-            print("No front video camera available")
+            debugPrint("No front video camera available")
             return
         }
         
@@ -70,12 +70,15 @@ private extension FaceRecognitionViewController {
                 session.addInput(cameraInput)
             }
         } catch {
-            print("Failed to create capture device input: \(error)")
+            debugPrint("Failed to create capture device input: \(error)")
         }
         
         let videoOutput = AVCaptureVideoDataOutput()
         videoOutput.alwaysDiscardsLateVideoFrames = true
-        videoOutput.setSampleBufferDelegate(captureDetector, queue: videoOutputQueue)
+        videoOutput.setSampleBufferDelegate(
+            captureDetector,
+            queue: videoOutputQueue
+        )
         videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         
         if session.canAddOutput(videoOutput) {
@@ -88,21 +91,21 @@ private extension FaceRecognitionViewController {
         previewLayer?.videoGravity = .resizeAspect
         previewLayer?.frame = view.bounds
         
-        if let previewLayer = previewLayer {
+        if let previewLayer {
             view.layer.insertSublayer(previewLayer, at: 0)
         }
     }
     
     func configureMetal() {
         guard let metalDevice = MTLCreateSystemDefaultDevice() else {
-            print("Metal is not supported on this device")
+            debugPrint("Metal is not supported on this device")
             return
         }
         
         metalCommandQueue = metalDevice.makeCommandQueue()
         
         metalView = MTKView()
-        if let metalView = metalView {
+        if let metalView {
             metalView.device = metalDevice
             metalView.isPaused = true
             metalView.enableSetNeedsDisplay = false

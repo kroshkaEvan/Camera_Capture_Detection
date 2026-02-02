@@ -9,13 +9,13 @@ import Foundation
 
 // MARK: - Navigation
 
-protocol CoordinatorProtocol: AnyObject {
+protocol CoordinatorProtocol: AnyObject, ObservableObject {
     var navigationPath: [Screen] { get set }
     func push(_ screen: Screen)
     func pop()
 }
 
-final class AppCoordinator: ObservableObject, CoordinatorProtocol {
+final class AppCoordinator: CoordinatorProtocol {
     @Published var navigationPath: [Screen] = []
     
     static let shared = AppCoordinator()

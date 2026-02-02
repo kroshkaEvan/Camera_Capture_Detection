@@ -98,7 +98,13 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
         .cornerRadius(10)
     }
     
-    private func sequenceInstructionView(_ info: (current: Int, total: Int, currentPose: String)) -> some View {
+    private func sequenceInstructionView(
+        _ info: (
+            current: Int,
+            total: Int,
+            currentPose: String
+        )
+    ) -> some View {
         VStack(spacing: 10) {
             Text("Step \(info.current)/\(info.total)")
                 .font(.headline)
@@ -168,8 +174,10 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
 // MARK: - DebugView
 
 struct DebugView<ViewModel>: View where ViewModel: FaceRecognitionViewModelProtocol {
-    @ObservedObject private var viewModel: ViewModel
-    @State private var showDebugInfo = false
+    @ObservedObject
+    private var viewModel: ViewModel
+    @State
+    private var showDebugInfo = false
 
     init(model: ViewModel) {
         self._viewModel = ObservedObject(wrappedValue: model)
