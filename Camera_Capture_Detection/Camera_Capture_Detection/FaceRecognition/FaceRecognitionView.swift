@@ -21,8 +21,6 @@ struct FaceRecognitionView<ViewModel>: View where ViewModel: FaceRecognitionView
         content
             .overlay {
                 switch viewModel.state {
-                case .loading:
-                    EncryptingFileView()
                 case .failed(let error):
                     AppAlertView(
                         title: "Error",
@@ -48,11 +46,10 @@ struct FaceRecognitionView<ViewModel>: View where ViewModel: FaceRecognitionView
                 ZStack {
                     FaceCameraView(model: viewModel)
                     
-                    DebugView(model: viewModel)
                     LayoutGuideView(
                         layoutGuideFrame: viewModel.faceLayoutGuideFrame,
                         hasDetectedValidFace: viewModel.hasDetectedValidFace,
-                        count: viewModel.timeLeft
+                        progress: viewModel.progressPercentage
                     )
                     
                     FaceOverlayView(viewModel: viewModel)

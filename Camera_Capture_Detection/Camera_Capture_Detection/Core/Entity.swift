@@ -94,6 +94,21 @@ enum FaceVerificationStage {
     case failed
 }
 
+extension FaceVerificationStage: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .notStarted:
+            return "Not Started"
+        case .inProgress(let sequence):
+            return "In Progress (\(sequence.count) steps)"
+        case .success:
+            return "Success"
+        case .failed:
+            return "Failed"
+        }
+    }
+}
+
 enum FaceBoundsState {
     case unknown
     case detectedFaceTooSmall

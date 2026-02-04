@@ -26,11 +26,6 @@ final class FaceCaptureDetector: NSObject {
     private var currentFrameBuffer: CVImageBuffer?
     private var subscriptions = Set<AnyCancellable>()
     
-    private let imageProcessingQueue = DispatchQueue(
-        label: "Image Processing Queue",
-        qos: .userInitiated
-    )
-    
     func setupModelBinding() {
         guard let model = model as? FaceRecognitionViewModel else { return }
         
@@ -58,7 +53,7 @@ private extension FaceCaptureDetector {
             yaw: result.yaw ?? 0
         )
         
-        DispatchQueue.main.async {
+        Task { @MainActor in
             model.perform(action: .faceObservationDetected(faceObservationModel))
         }
     }
@@ -70,7 +65,7 @@ private extension FaceCaptureDetector {
             quality: result.faceCaptureQuality ?? 0
         )
         
-        DispatchQueue.main.async {
+        Task { @MainActor in
             model.perform(action: .faceQualityObservationDetected(faceQualityModel))
         }
     }
@@ -80,7 +75,7 @@ private extension FaceCaptureDetector {
         
         let originalImage = CIImage(cvImageBuffer: currentFrameBuffer)
             .oriented(.upMirrored)
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.detectorDelegate?.draw(image: originalImage)
         }
     }
@@ -89,7 +84,8 @@ private extension FaceCaptureDetector {
         from pixelBuffer: CVPixelBuffer,
         completion: @escaping (UIImage?) -> Void
     ) {
-        imageProcessingQueue.async {
+        
+        Task { @MainActor in
             let context = CIContext()
             let originalImage = CIImage(cvPixelBuffer: pixelBuffer)
             let coreImageWidth = originalImage.extent.width
@@ -116,7 +112,7 @@ private extension FaceCaptureDetector {
         error: Error?
     ) {
         guard let results = request.results as? [VNFaceObservation] else {
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self.model?.perform(action: .noFaceDetected)
             }
             return
@@ -125,7 +121,7 @@ private extension FaceCaptureDetector {
         if let result = results.first {
             processFaceObservation(result)
         } else {
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self.model?.perform(action: .noFaceDetected)
             }
         }
@@ -167,7 +163,7 @@ extension FaceCaptureDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
             capturePhoto(from: imageBuffer) { [weak self] photo in
                 guard let self, let photo else { return }
                 
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.model?.perform(action: .sendSelfiePhoto(photo))
                 }
             }

@@ -32,7 +32,7 @@ final class WalletsPreFaceViewModel: WalletsPreFaceViewModelProtocol {
 private extension WalletsPreFaceViewModel {
     func requestCameraAccess() {
         AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 granted
                 ? self?.navigateToFaceRecognition()
                 : self?.showCameraPermissionAlert()
@@ -41,11 +41,14 @@ private extension WalletsPreFaceViewModel {
     }
     
     func navigateToFaceRecognition() {
-        coordinator?.push(.encrypting)
+        coordinator?.showEncryptingOverlay()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            self.coordinator?.pop()
-            AppCoordinator.shared.navigateToFaceRecognition()
+        Task {
+            try await Task.sleep(nanoseconds: 1_500_000_000)
+            await MainActor.run {
+                self.coordinator?.hideOverlay()
+                AppCoordinator.shared.navigateToFaceRecognition()
+            }
         }
     }
     

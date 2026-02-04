@@ -10,7 +10,10 @@ import SwiftUI
 // MARK: - FaceOverlayView
 
 struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewModelProtocol {
-    @ObservedObject private var viewModel: ViewModel
+    @ObservedObject
+    private var viewModel: ViewModel
+    @State
+    private var showDebugInfo = false
     
     init(viewModel: @autoclosure @escaping () -> ViewModel) {
         self._viewModel = ObservedObject(wrappedValue: viewModel())
@@ -31,6 +34,7 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
                             defaultInstructionView
                         }
                     }
+                    .padding(.horizontal)
                     
                     Spacer()
                         .frame(height: 100)
@@ -40,7 +44,7 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
                     if viewModel.faceDetectedState == .noFaceDetected {
                         Text("No face detected")
                             .font(.headline)
-                            .foregroundColor(.red)
+                            .foregroundColor(.white)
                             .padding()
                             .background(Color.black.opacity(0.7))
                             .cornerRadius(8)
@@ -49,6 +53,36 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
                     Spacer()
                 }
                 .padding(.top, 50)
+                
+                VStack {
+                    HStack {
+                        Spacer()
+                        
+                        Button {
+                            withAnimation(.spring(response: 0.3)) {
+                                showDebugInfo.toggle()
+                            }
+                        } label: {
+                            Image(systemName: showDebugInfo ? "xmark.circle.fill" : "ladybug.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(
+                                    VisualEffectView(style: .systemThinMaterialDark)
+                                        .clipShape(Circle())
+                                )
+                                .shadow(color: .black.opacity(0.3), radius: 5)
+                        }
+                        .padding(.top, 60)
+                        .padding(.trailing, 20)
+                    }
+                    Spacer()
+                }
+                
+                if showDebugInfo {
+                    DebugView(viewModel: viewModel)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
         }
     }
@@ -69,8 +103,10 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
                 .foregroundColor(.white)
         }
         .padding()
-        .background(Color.black.opacity(0.7))
-        .cornerRadius(15)
+        .background(
+            VisualEffectView(style: .systemUltraThinMaterialDark)
+                .cornerRadius(15)
+        )
     }
     
     private var defaultInstructionView: some View {
@@ -94,8 +130,10 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
         .fontWeight(.semibold)
         .foregroundColor(.white)
         .padding()
-        .background(Color.black.opacity(0.7))
-        .cornerRadius(10)
+        .background(
+            VisualEffectView(style: .systemUltraThinMaterialDark)
+                .cornerRadius(10)
+        )
     }
     
     private func sequenceInstructionView(
@@ -120,16 +158,18 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
                 .progressViewStyle(LinearProgressViewStyle(tint: .green))
                 .frame(width: 200)
             
-            if viewModel.hasDetectedValidFace && viewModel.timeLeft > 0 {
-                Text("\(min(100, viewModel.timeLeft * 100 / 30))%")
+            if viewModel.hasDetectedValidFace && viewModel.progressPercentage > 0 {
+                Text("\(Int(viewModel.progressPercentage * 100))%")
                     .font(.caption)
                     .foregroundColor(.white)
                     .padding(.top, 5)
             }
         }
         .padding()
-        .background(Color.black.opacity(0.7))
-        .cornerRadius(15)
+        .background(
+            VisualEffectView(style: .systemUltraThinMaterialDark)
+                .cornerRadius(15)
+        )
     }
     
     private func getSequenceInfo() -> (
@@ -137,38 +177,38 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
         total: Int,
         currentPose: String
     )? {
-            let vm = viewModel
-            
-            if case .inProgress(let sequence) = vm.verificationStage {
-                guard vm.currentSequenceIndex < sequence.count else {
-                    return nil
-                }
-                
-                let currentStep = vm.currentSequenceIndex + 1
-                let totalSteps = sequence.count
-                let currentPose: String
-                let currentState = sequence[vm.currentSequenceIndex]
-                
-                switch currentState {
-                case .faceOnCentre:
-                    currentPose = "Look STRAIGHT at camera"
-                case .faceLeft:
-                    currentPose = "Turn head to the LEFT"
-                case .faceRight:
-                    currentPose = "Turn head to the RIGHT"
-                case .faceUp:
-                    currentPose = "Look UP"
-                case .faceDown:
-                    currentPose = "Look DOWN"
-                case .successCompleted:
-                    currentPose = "Verification complete!"
-                }
-                
-                return (currentStep, totalSteps, currentPose)
+        let vm = viewModel
+        
+        if case .inProgress(let sequence) = vm.verificationStage {
+            guard vm.currentSequenceIndex < sequence.count else {
+                return nil
             }
             
-            return nil
+            let currentStep = vm.currentSequenceIndex + 1
+            let totalSteps = sequence.count
+            let currentPose: String
+            let currentState = sequence[vm.currentSequenceIndex]
+            
+            switch currentState {
+            case .faceOnCentre:
+                currentPose = "Look STRAIGHT at camera"
+            case .faceLeft:
+                currentPose = "Turn head to the LEFT"
+            case .faceRight:
+                currentPose = "Turn head to the RIGHT"
+            case .faceUp:
+                currentPose = "Look UP"
+            case .faceDown:
+                currentPose = "Look DOWN"
+            case .successCompleted:
+                currentPose = "Verification complete!"
+            }
+            
+            return (currentStep, totalSteps, currentPose)
         }
+        
+        return nil
+    }
 }
 
 // MARK: - DebugView
@@ -176,68 +216,95 @@ struct FaceOverlayView<ViewModel>: View where ViewModel: FaceRecognitionViewMode
 struct DebugView<ViewModel>: View where ViewModel: FaceRecognitionViewModelProtocol {
     @ObservedObject
     private var viewModel: ViewModel
-    @State
-    private var showDebugInfo = false
-
-    init(model: ViewModel) {
-        self._viewModel = ObservedObject(wrappedValue: model)
+    
+    init(viewModel: ViewModel) {
+        self._viewModel = ObservedObject(wrappedValue: viewModel)
     }
-
+    
     var body: some View {
-        VStack {
-            Spacer()
-
-            if showDebugInfo {
-                debugInfoView
-                    .transition(.opacity)
-            }
-
-            Button {
-                withAnimation {
-                    showDebugInfo.toggle()
-                }
-            } label: {
-                Image(systemName: "ladybug.fill")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .padding(10)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(Circle())
-            }
-            .padding(.bottom, 30)
-        }
-    }
-
-    private var debugInfoView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Debug Information")
                 .font(.headline)
+                .fontWeight(.bold)
                 .foregroundColor(.white)
-
-            debugRow("Face State", "\(viewModel.stateFace)")
-            debugRow("Roll", viewModel.isAcceptableRoll ? "✓" : "✗")
-            debugRow("Pitch", viewModel.isAcceptablePitch ? "✓" : "✗")
-            debugRow("Yaw", viewModel.isAcceptableYaw ? "✓" : "✗")
-            debugRow("Bounds", "\(viewModel.isAcceptableBounds)")
-            debugRow("Quality", viewModel.isAcceptableQuality ? "✓" : "✗")
-            debugRow("Valid Face", viewModel.hasDetectedValidFace ? "YES" : "NO")
-            debugRow("Timer", "\(viewModel.timeLeft)")
+                .padding(.bottom, 4)
+            
+            Divider()
+                .background(Color.white.opacity(0.3))
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    debugSection("Current State") {
+                        debugRow("Pose", viewModel.debugInfo.currentPose)
+                        debugRow("Sequence", viewModel.debugInfo.sequenceProgress)
+                        debugRow("Stage", "\(viewModel.verificationStageDescription)")
+                    }
+                    debugSection("Face Data") {
+                        if let roll = viewModel.debugInfo.roll {
+                            debugRow("Roll", String(format: "%.2f rad", roll))
+                        }
+                        if let pitch = viewModel.debugInfo.pitch {
+                            debugRow("Pitch", String(format: "%.2f rad", pitch))
+                        }
+                        if let yaw = viewModel.debugInfo.yaw {
+                            debugRow("Yaw", String(format: "%.2f rad", yaw))
+                        }
+                        if let quality = viewModel.debugInfo.quality {
+                            debugRow("Quality", String(format: "%.2f", quality))
+                        }
+                    }
+                    debugSection("Validations") {
+                        debugRow("Roll OK", viewModel.isAcceptableRoll ? "✓" : "✗", color: viewModel.isAcceptableRoll ? .green : .red)
+                        debugRow("Pitch OK", viewModel.isAcceptablePitch ? "✓" : "✗", color: viewModel.isAcceptablePitch ? .green : .red)
+                        debugRow("Yaw OK", viewModel.isAcceptableYaw ? "✓" : "✗", color: viewModel.isAcceptableYaw ? .green : .red)
+                        debugRow("Quality OK", viewModel.isAcceptableQuality ? "✓" : "✗", color: viewModel.isAcceptableQuality ? .green : .red)
+                        debugRow("Bounds", "\(viewModel.debugInfo.boundsState)")
+                    }
+                    
+                    debugSection("Position & Timer") {
+                        if let position = viewModel.debugInfo.facePosition {
+                            debugRow("Face X", String(format: "%.0f", position.x))
+                            debugRow("Face Y", String(format: "%.0f", position.y))
+                        }
+                        debugRow("Timer Progress", "\(Int(viewModel.debugInfo.timerProgress * 100))%")
+                        debugRow("Valid Face", viewModel.hasDetectedValidFace ? "YES" : "NO", color: viewModel.hasDetectedValidFace ? .green : .red)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .frame(maxHeight: 400)
         }
-        .padding()
-        .background(Color.black.opacity(0.75))
-        .cornerRadius(12)
-        .padding(.horizontal)
+        .padding(16)
+        .background(
+            VisualEffectView(style: .systemUltraThinMaterialDark)
+                .cornerRadius(16)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+        .padding(.horizontal, 20)
+        .padding(.top, 100)
     }
-
-    private func debugRow(_ title: String, _ value: String) -> some View {
+    
+    private func debugSection(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.white.opacity(0.7))
+                .padding(.top, 4)
+            
+            content()
+        }
+    }
+    
+    private func debugRow(_ title: String, _ value: String, color: Color = .white) -> some View {
         HStack {
             Text(title)
-                .font(.caption)
-                .foregroundColor(.white.opacity(0.7))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.8))
             Spacer()
             Text(value)
-                .font(.caption)
-                .foregroundColor(.white)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(color)
         }
     }
 }
@@ -247,7 +314,7 @@ struct DebugView<ViewModel>: View where ViewModel: FaceRecognitionViewModelProto
 struct LayoutGuideView: View {
     let layoutGuideFrame: CGRect
     let hasDetectedValidFace: Bool
-    let count: Int
+    let progress: Float
     
     var body: some View {
         GeometryReader { geometry in
@@ -272,45 +339,25 @@ struct LayoutGuideView: View {
                         y: layoutGuideFrame.midY
                     )
                 
-                if hasDetectedValidFace && count > 0 {
+                if hasDetectedValidFace && progress > 0 {
                     ZStack {
                         Circle()
                             .stroke(Color.white.opacity(0.3), lineWidth: 4)
                             .frame(width: 60, height: 60)
                         
                         Circle()
-                            .trim(from: 0, to: CGFloat(count) / 100)
+                            .trim(from: 0, to: CGFloat(progress))
                             .stroke(Color.green, lineWidth: 4)
                             .frame(width: 60, height: 60)
                             .rotationEffect(.degrees(-90))
                         
-                        Text("\(100 - count)")
+                        Text("\(Int((1 - progress) * 100))")
                             .font(.headline)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                     }
                     .position(x: layoutGuideFrame.midX, y: layoutGuideFrame.minY - 50)
                 }
-                
-                ForEach(0..<4) { index in
-                    cornerIndicator(at: index)
-                }
-                
-                Path { path in
-                    path.move(to: CGPoint(x: layoutGuideFrame.minX, y: layoutGuideFrame.midY))
-                    path.addLine(to: CGPoint(x: layoutGuideFrame.maxX, y: layoutGuideFrame.midY))
-                    path.move(to: CGPoint(x: layoutGuideFrame.midX, y: layoutGuideFrame.minY))
-                    path.addLine(to: CGPoint(x: layoutGuideFrame.midX, y: layoutGuideFrame.maxY))
-                }
-                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                .frame(
-                    width: layoutGuideFrame.width,
-                    height: layoutGuideFrame.height
-                )
-                .position(
-                    x: layoutGuideFrame.midX,
-                    y: layoutGuideFrame.midY
-                )
             }
         }
     }
